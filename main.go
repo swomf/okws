@@ -106,6 +106,14 @@ func directoryHandler(base string) http.HandlerFunc {
 			http.ServeFile(w, r, fsPath)
 			return
 		}
+		if fileExists(fsPath + "/index.html") {
+			http.ServeFile(w, r, fsPath+"/index.html")
+			return
+		}
+		if fileExists(fsPath + "/index.htm") {
+			http.ServeFile(w, r, fsPath+"/index.htm")
+			return
+		}
 
 		// render the directory otherwise
 		entries, err := os.ReadDir(fsPath)
