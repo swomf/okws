@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -16,6 +18,22 @@ var (
 	bind string
 	dir  string
 )
+
+func GetPreferredOutboundIP() net.IP {
+	// the destination below does not need to exist at all but the
+	// destination itself determines the preferred outbound IP
+	// in particular, 127.0.0.1 may be used as a default bind if 0.0.0.0
+	// is used instead; this would be useless
+	conn, err := net.Dial("udp", "9.9.9.9:80")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+	return localAddr.IP
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "okws",
@@ -33,7 +51,12 @@ var rootCmd = &cobra.Command{
 
 		http.HandleFunc("/", directoryHandler(absDir))
 
+		if len(bind) == 0 {
+			bind = GetPreferredOutboundIP().String()
+		}
+
 		address := fmt.Sprintf("%s:%d", bind, port)
+
 		fmt.Printf("Serving directory browser on http://%s from '%s'\n", address, absDir)
 
 		return http.ListenAndServe(address, nil)
